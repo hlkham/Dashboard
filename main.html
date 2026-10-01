@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light" data-view="laptop">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -21,7 +21,6 @@
     --hover: #fafafa;
     --shadow: 0 1px 2px rgba(16,24,40,.04), 0 0 0 1px rgba(16,24,40,.03);
     --skel1: #f0f1f3; --skel2: #f8f9fa;
-    --frame: #1c1c1e;
     --up: #16a34a;
     --down: #dc2626;
     --warn: #d97706;
@@ -49,7 +48,6 @@
     --hover: #1d2026;
     --shadow: 0 0 0 1px #23262d;
     --skel1: #22252b; --skel2: #2b2f36;
-    --frame: #2f333b;
     --up: #22c55e;
     --down: #f87171;
     --warn: #fbbf24;
@@ -133,14 +131,14 @@
   .reason { color: var(--muted); font-size: 12.5px; margin: -6px 0 12px; }
 
   .tbl { width: 100%; }
-  .row, .hdr { display: grid; grid-template-columns: 1.05fr 1fr .85fr 1.7fr; gap: 8px; align-items: center; }
+  .row, .hdr { display: grid; grid-template-columns: 1.1fr .95fr .8fr 1.2fr; gap: 8px; align-items: center; }
   .hdr { color: var(--muted); font-size: 11.5px; font-weight: 600; padding: 0 0 6px; border-bottom: 1px solid var(--line); }
   .hdr div:nth-child(2), .hdr div:nth-child(3), .row div:nth-child(2), .row div:nth-child(3) { text-align: right; }
   .row { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
   .row .lbl { font-weight: 700; }
   .row .val { font-weight: 500; }
-  .row .stat { font-size: 13px; font-weight: 500; }
-  .row .stat .stat-sub { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+  .row .stat { font-size: 13px; font-weight: 600; line-height: 1.4; }
+  .row .stat .stat-sub { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-top: 1px; }
   .up { color: var(--up); }
   .down { color: var(--down); }
   .mut { color: var(--muted); }
@@ -236,10 +234,12 @@
 
   @media (max-width: 480px) {
     body { padding: 20px 12px 36px; }
-    .row, .hdr { grid-template-columns: 1fr .95fr .8fr 1.45fr; gap: 6px; }
+    .row, .hdr { grid-template-columns: 1.05fr .9fr .75fr 1.1fr; gap: 6px; }
     .row { font-size: 12.5px; }
     .row .stat { font-size: 12px; }
     .dlg-in { padding: 14px; }
+    .dr-top { flex-wrap: wrap; row-gap: 3px; }
+    .dr-lbl { flex: 1 0 100%; }
   }
   /* Pivot settings */
   .settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; background: var(--card); border-radius: 16px; padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow); font-size: 13px; }
@@ -249,42 +249,21 @@
   .fld input { width: 64px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; text-align: center; }
 
   /* View switch + zoom controls */
-  .seg.vseg { background: var(--card); border: 1px solid var(--line); }
-  .seg.vseg button { display: inline-flex; align-items: center; gap: 6px; }
-  .seg.vseg button[aria-pressed="true"] { background: var(--ink); color: var(--card); box-shadow: none; }
   .zoomgrp { display: inline-flex; gap: 4px; }
   .zbtn { min-width: 32px; height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; display: inline-grid; place-items: center; }
   .zbtn:hover { background: var(--hover); }
 
-  /* Phone view (forced): same compact layout as a real small screen */
-  html[data-view="phone"] body { padding: 24px 12px 36px; }
-  html[data-view="phone"] .wrap { max-width: 390px; }
-  html[data-view="phone"] h1 { font-size: 22px; }
-  html[data-view="phone"] .top { flex-direction: column; align-items: flex-start; gap: 12px; }
-  html[data-view="phone"] .card { padding: 16px 14px 10px; }
-  html[data-view="phone"] .row, html[data-view="phone"] .hdr { grid-template-columns: 1fr .95fr .8fr 1.45fr; gap: 6px; }
-  html[data-view="phone"] .row { font-size: 12.5px; }
-  html[data-view="phone"] .row .stat { font-size: 12px; }
-  html[data-view="phone"] .dlg-in { padding: 14px; }
-  html[data-view="phone"] .chart-dlg, html[data-view="phone"] .manage-dlg { width: min(390px, calc(100vw - 24px)); }
-  html[data-view="phone"] .ch-wrap { height: clamp(320px, 58vh, 480px); }
-  @media (min-width: 481px) {
-    html[data-view="phone"] .wrap {
-      position: relative; border: 10px solid var(--frame); border-radius: 44px; padding: 46px 14px 28px;
-      background: var(--bg); box-shadow: 0 20px 50px rgba(0,0,0,.18);
-    }
-    html[data-view="phone"] .wrap::before { content: ""; position: absolute; top: 12px; left: 50%; width: 84px; height: 20px; margin-left: -42px; border-radius: 999px; background: var(--frame); }
-  }
   /* Day range bar */
-  .drange { margin: 0 0 14px; }
-  .dr-top { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+  .drange { margin: 0 0 10px; }
+  .drange:last-of-type { margin-bottom: 14px; }
+  .dr-top { display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+  .dr-lbl { font-weight: 700; color: var(--ink); margin-right: auto; }
+  .dr-date { font-weight: 500; color: var(--muted); margin-left: 7px; font-size: 11px; }
   .dr-top b { color: var(--ink); font-weight: 600; margin-left: 4px; }
   .dr-bar { position: relative; height: 6px; border-radius: 999px; background: linear-gradient(90deg, rgba(220,38,38,.28), rgba(217,119,6,.22), rgba(22,163,74,.28)); margin: 0 6px; }
   .dr-bar i { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 3px solid var(--card); box-shadow: 0 0 0 1px var(--line); transform: translate(-50%, -50%); }
 
   /* Clickable support / resistance levels */
-  .lvl-btn { font: inherit; color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; text-align: left; }
-  .lvl-btn:hover { color: var(--ink); }
   .lvls { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0 10px; border-bottom: 1px solid var(--line); }
   .lvl { display: inline-flex; align-items: baseline; gap: 6px; background: var(--pill-bg); border-radius: 999px; padding: 4px 10px; font-size: 12.5px; }
   .lvl b { font-weight: 700; }
@@ -300,10 +279,6 @@
       <div class="sub"><span class="dot" id="dot"></span><span id="sub">Connecting…</span></div>
     </div>
     <div class="ctrl">
-      <div class="seg vseg" id="viewSeg" role="group" aria-label="View mode">
-        <button type="button" data-v="laptop" aria-pressed="true"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="10" height="7" rx="1"/><path d="M1.5 12.5h13"/></svg>Laptop</button>
-        <button type="button" data-v="phone" aria-pressed="false"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="1.5" width="7" height="13" rx="1.6"/><path d="M7 12.4h2"/></svg>Phone</button>
-      </div>
       <button class="tbtn" id="themeBtn" type="button" role="switch" aria-checked="false"><span class="track"><span class="thumb"></span></span>Dark mode</button>
       <button class="tbtn" id="manageBtn" type="button">Manage coins</button>
       <button class="tbtn" id="refresh" type="button">Refresh now</button>
@@ -614,7 +589,15 @@ function analyze(daily, weekly) {
   };
 
   const today = last(daily);
-  return { price, prev, ma, dCross, wCross, hTag, lTag, trend, res, sup, rd, rw, health, reason, series, dayLo: today.l, dayHi: today.h, volNow, volMA };
+  const wWin = daily.slice(-7);
+  const weekLo = Math.min(...wWin.map(b => b.l)), weekHi = Math.max(...wWin.map(b => b.h));
+  const mWin = daily.slice(-30);
+  const monthLo = Math.min(...mWin.map(b => b.l)), monthHi = Math.max(...mWin.map(b => b.h));
+  return { price, prev, ma, dCross, wCross, hTag, lTag, trend, res, sup, rd, rw, health, reason, series,
+    dayLo: today.l, dayHi: today.h, dayT: today.t,
+    weekLo, weekHi, weekFromT: wWin[0].t,
+    monthLo, monthHi, monthFromT: mWin[0].t, asOfT: today.t,
+    volNow, volMA };
 }
 
 /* ---------- Formatting ---------- */
@@ -702,23 +685,25 @@ function structRow(a) {
   const t = a.trend === 'up' ? ['up', '▲ Uptrend'] : a.trend === 'down' ? ['down', '▼ Downtrend'] : ['amber', '◆ Range'];
   return `<div class="row"><div class="lbl">Structure</div><div class="val">High: ${hi}</div><div class="val">Low: ${lo}</div><div class="stat ${t[0]}">${t[1]}</div></div>`;
 }
-const openLv = new Set();   // expanded support / resistance lists, keyed "BTC:res"
-function levelRow(label, cls, arr, price, key, id) {
+function levelRow(label, cls, arr, price) {
   if (!arr.length) return `<div class="row"><div class="lbl" style="color:var(${cls})">${label}</div><div class="val mut">—</div><div class="mut">—</div><div class="stat mut">None nearby</div></div>`;
   const p = arr[0], d = (p / price - 1) * 100;
-  const k = id + ':' + key, open = openLv.has(k);
-  const btn = `<button type="button" class="lvl-btn" data-act="lv" data-k="${k}" aria-expanded="${open}" title="${open ? 'Hide' : 'Show'} all ${label.toLowerCase()} levels">${arr.length} active <span aria-hidden="true">${open ? '▴' : '▾'}</span></button>`;
   let out = `<div class="row"><div class="lbl" style="color:var(${cls})">${label}</div><div class="val">${fmt(p)}</div>
-    <div style="color:var(${cls})">${pct(d)}</div><div class="stat mut">${btn}</div></div>`;
-  if (open) out += `<div class="lvls">${arr.map(v => `<span class="lvl" style="--lc:var(${cls})"><b>${fmt(v)}</b><i>${pct((v / price - 1) * 100)}</i></span>`).join('')}</div>`;
+    <div style="color:var(${cls})">${pct(d)}</div><div class="stat mut">${arr.length} nearby</div></div>`;
+  out += `<div class="lvls">${arr.map(v => `<span class="lvl" style="--lc:var(${cls})"><b>${fmt(v)}</b><i>${pct((v / price - 1) * 100)}</i></span>`).join('')}</div>`;
   return out;
 }
-function rangeBar(a) {
-  const lo = a.dayLo, hi = a.dayHi, span = hi - lo;
-  const pos = span > 0 ? Math.max(0, Math.min(1, (a.price - lo) / span)) * 100 : 50;
-  return `<div class="drange" title="Today's range (UTC day). Price is ${pos.toFixed(0)}% of the way from the low to the high.">
-    <div class="dr-top"><span>Low<b>${fmt(lo)}</b></span><span>High<b>${fmt(hi)}</b></span></div>
+function rangeBarRow(label, lo, hi, price, note, dateText) {
+  const span = hi - lo;
+  const pos = span > 0 ? Math.max(0, Math.min(1, (price - lo) / span)) * 100 : 50;
+  return `<div class="drange" title="${note} Price is ${pos.toFixed(0)}% of the way from the low to the high.">
+    <div class="dr-top"><span class="dr-lbl">${label}<span class="dr-date">${dateText}</span></span><span>Low<b>${fmt(lo)}</b></span><span>High<b>${fmt(hi)}</b></span></div>
     <div class="dr-bar"><i style="left:${pos.toFixed(1)}%"></i></div></div>`;
+}
+function rangeBars(a) {
+  return rangeBarRow('Day', a.dayLo, a.dayHi, a.price, "Today's range (UTC day).", fdate(a.dayT))
+    + rangeBarRow('Week', a.weekLo, a.weekHi, a.price, "Trailing 7-day range.", `${fdate(a.weekFromT)} \u2013 ${fdate(a.asOfT)}`)
+    + rangeBarRow('Month', a.monthLo, a.monthHi, a.price, "Trailing 30-day range.", `${fdate(a.monthFromT)} \u2013 ${fdate(a.asOfT)}`);
 }
 
 const ICON_CHART = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2v12h12"/><path d="M4.5 10.5l3-3.5 2.5 2 3.5-4.5"/></svg>';
@@ -748,7 +733,7 @@ function cardHTML(c) {
   return `<article class="card">
     ${head(pillHTML(a.health) + stale, priceHTML)}
     <div class="reason">${esc(a.reason)}</div>
-    ${rangeBar(a)}
+    ${rangeBars(a)}
     <div class="tbl">
       <div class="hdr"><div>MA</div><div>Value</div><div>Distance</div><div>Status</div></div>
       ${maRow('--c-50d', '50 Day', a.price, a.ma.d50)}
@@ -764,8 +749,8 @@ function cardHTML(c) {
       ${rsiRow('RSI Day', a.rd)}
       ${rsiRow('RSI Week', a.rw)}
       ${structRow(a)}
-      ${levelRow('Resistance', '--c-res', a.res, a.price, 'res', id)}
-      ${levelRow('Support', '--c-sup', a.sup, a.price, 'sup', id)}
+      ${levelRow('Resistance', '--c-res', a.res, a.price)}
+      ${levelRow('Support', '--c-sup', a.sup, a.price)}
     </div>${foot}</article>`;
 }
 
@@ -936,7 +921,6 @@ $('grid').addEventListener('click', e => {
   if (!b) return;
   if (b.dataset.act === 'chart') openChart(b.dataset.id);
   else if (b.dataset.act === 'remove') removeCoin(b.dataset.id);
-  else if (b.dataset.act === 'lv') { const k = b.dataset.k; if (openLv.has(k)) openLv.delete(k); else openLv.add(k); render(); }
 });
 $('chClose').addEventListener('click', () => $('chartDlg').close());
 $('rangeSeg').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; chart.n = +b.dataset.r; chart.off = 0; drawChart(); });
@@ -1294,16 +1278,6 @@ function applyPiv(key, raw, commit) {
 });
 $('pivReset').addEventListener('click', () => { settings.st = PIV_DEF.st; settings.sr = PIV_DEF.sr; saveSettings(); syncPivInputs(); reanalyzeAll(); });
 syncPivInputs(); updatePivNote();
-
-/* ---------- Laptop / phone view ---------- */
-function setView(v) {
-  document.documentElement.setAttribute('data-view', v);
-  document.querySelectorAll('#viewSeg [data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
-  store.set('cryptoDash.view', v);
-  if ($('chartDlg').open) requestAnimationFrame(drawChart);
-}
-$('viewSeg').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); });
-setView(store.get('cryptoDash.view') || (window.innerWidth <= 480 ? 'phone' : 'laptop'));
 
 /* ---------- Filters + start ---------- */
 $('filters').addEventListener('click', e => {
