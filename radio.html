@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Malaysia FM Radio</title>
+<meta name="color-scheme" content="light dark">
+<script>
+  (function () {
+    var t = null;
+    try { t = JSON.parse(localStorage.getItem("mfm.theme")); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = "dark";   // dark by default
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+  :root {
+    --bg: #e8edef;
+    --panel: #ffffff;
+    --ink: #13222a;
+    --muted: #5d6e77;
+    --line: #cfd8dc;
+    --player-bg: #13222a;
+    --signal: #e4272e;
+    --accent: var(--signal);
+    --radius: 18px;
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a1216;
+    --panel: #15232a;
+    --ink: #e8f0f3;
+    --muted: #8fa3ad;
+    --line: #2a3b44;
+    --player-bg: #1c3039;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--ink); min-height: 100vh; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .brand { font-weight: 800; letter-spacing: .01em; font-size: 1.05rem; }
+  .theme {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; font-size: .9rem; cursor: pointer;
+  }
+  .theme:hover { border-color: var(--muted); }
+  .theme svg { width: 18px; height: 18px; fill: currentColor; }
+  .theme .i-sun { display: none; }
+  :root[data-theme="dark"] .theme .i-sun { display: block; }
+  :root[data-theme="dark"] .theme .i-moon { display: none; }
+
+  /* Player */
+  .player {
+    background: var(--player-bg); color: #fff; border-radius: 26px; padding: 22px;
+    display: grid; grid-template-columns: 148px 1fr; gap: 22px; align-items: center;
+    transition: background .4s;
+  }
+  .player .logo { width: 148px; height: 148px; border-radius: 22px; overflow: hidden; background: #fff; }
+  .info { min-width: 0; }
+  .status { margin: 0 0 6px; font-size: .9rem; color: #aebcc3; display: flex; align-items: center; gap: 10px; min-height: 1.4em; }
+  .eq { display: inline-flex; align-items: flex-end; gap: 3px; height: 16px; }
+  .eq i { width: 3px; background: var(--accent); height: 4px; border-radius: 2px; }
+  .player.playing .eq i { animation: bounce 900ms ease-in-out infinite; }
+  .eq i:nth-child(2) { animation-delay: -.3s !important; }
+  .eq i:nth-child(3) { animation-delay: -.6s !important; }
+  .eq i:nth-child(4) { animation-delay: -.15s !important; }
+  @keyframes bounce { 0%,100% { height: 4px } 50% { height: 16px } }
+  h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.05; letter-spacing: -.01em; }
+  .tag { margin: 6px 0 0; color: #cdd8dd; }
+  .controls { margin-top: 18px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .play {
+    width: 64px; height: 64px; border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--accent); color: #fff; display: grid; place-items: center; flex: none;
+  }
+  .play:hover { filter: brightness(1.08); }
+  .play svg { width: 28px; height: 28px; fill: currentColor; }
+  .play .i-pause { display: none; }
+  .player.playing .play .i-play, .player.loading .play .i-play { display: none; }
+  .player.playing .play .i-pause, .player.loading .play .i-pause { display: block; }
+  .vol { display: flex; align-items: center; gap: 10px; color: #aebcc3; font-size: .9rem; }
+  .vol input { width: 140px; accent-color: var(--accent); }
+  button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid #ffb703; outline-offset: 3px; }
+
+  details { margin-top: 14px; color: #aebcc3; font-size: .9rem; }
+  summary { cursor: pointer; width: fit-content; }
+  .custom { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .custom input { flex: 1 1 240px; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid #47606c; background: #0d1a20; color: #fff; font: inherit; }
+  .custom button { padding: 9px 14px; border-radius: 10px; border: 1px solid #47606c; background: transparent; color: #fff; cursor: pointer; font: inherit; }
+  .custom button:hover { background: #22343c; }
+  .hint { margin: 8px 0 0; font-size: .82rem; }
+
+  /* Station grid */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .station {
+    background: var(--panel); border: 2px solid transparent; border-radius: var(--radius);
+    padding: 12px; cursor: pointer; text-align: left; font: inherit; color: inherit;
+    display: grid; gap: 10px; box-shadow: 0 1px 0 var(--line);
+  }
+  .station:hover { border-color: var(--line); }
+  .station[aria-checked="true"] { border-color: var(--ink); }
+  .station .logo { aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: #fff; }
+  .station b { font-size: 1.05rem; }
+  .station small { display: block; color: var(--muted); margin-top: 2px; }
+
+  /* Logos */
+  .logo { display: grid; place-items: center; position: relative; }
+  .logo img { width: 100%; height: 100%; object-fit: contain; padding: 8%; background: #fff; }
+  .tile { width: 100%; height: 100%; display: grid; place-items: center; font-weight: 800; letter-spacing: .02em; text-align: center; line-height: 1; padding: 6px; }
+  .tile span { display: block; }
+  .tile .big { font-size: var(--big, 2rem); }
+  .tile .sub { font-size: .55em; font-weight: 600; opacity: .85; margin-top: 4px; }
+  .player .tile .big { font-size: calc(var(--big, 2rem) * 1.0); }
+
+  @media (max-width: 640px) {
+    .player { grid-template-columns: 1fr; text-align: left; }
+    .player .logo { width: 112px; height: 112px; }
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .vol input { width: 120px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .player.playing .eq i { animation: none; height: 12px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <span class="brand">Malaysia FM Radio</span>
+    <button class="theme" id="theme" type="button" aria-label="Switch to dark mode">
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 14.5A9 9 0 0 1 9.5 3 9 9 0 1 0 21 14.5z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      <span id="themeLabel">Dark mode</span>
+    </button>
+  </header>
+  <section class="player" id="player" aria-label="Now playing">
+    <div class="logo" id="nowLogo"></div>
+    <div class="info">
+      <p class="status" id="status" aria-live="polite"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="statusText">Ready</span></p>
+      <h1 id="nowName">Malaysia FM</h1>
+      <p class="tag" id="nowTag"></p>
+      <div class="controls">
+        <button class="play" id="play" aria-label="Play">
+          <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <label class="vol">Volume
+          <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" aria-label="Volume">
+        </label>
+      </div>
+      <details>
+        <summary>Stream settings</summary>
+        <div class="custom">
+          <input type="url" id="customUrl" placeholder="Paste a stream URL for this station (optional)" aria-label="Custom stream URL for this station">
+          <button id="saveUrl" type="button">Use this URL</button>
+          <button id="resetUrl" type="button">Reset</button>
+        </div>
+        <p class="hint">Stream addresses are looked up automatically. If a station won't play, paste its direct stream link here (MP3, AAC or .m3u8).</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="grid" id="grid" role="radiogroup" aria-label="Radio stations"></section>
+  <audio id="audio" preload="none"></audio>
+</main>
+
+<script>
+/* ============================================================
+   STATION CONFIG
+   - streams: MANUAL stream URL(s) (up to 3, tried in order). Used by MY FM and EIGHT FM only.
+   - streams left empty []: the stream address is found automatically using search/match (Melody, 988, Ai FM, GoXuan).
+   - logo: put a path/URL to an official logo here to use it instead of the built-in badge.
+   ============================================================ */
+const STATIONS = [
+  { id: "melody", name: "MELODY FM", tag: "强打好歌，强大资讯", color: "#6a2c91", fg: "#fff", mark: "MELODY", sub: "FM", big: "1.5rem",
+    search: ["Melody", "Melody FM"], match: /melody/i, streams: [], logo: "" },
+  { id: "my", name: "MY FM", tag: "MY FM 好玩！", color: "#e4272e", fg: "#fff", mark: "MY", sub: "好玩", big: "2.6rem",
+    search: ["MY FM", "My FM Malaysia"], match: /^my[\s-]?fm|^my$|\bmy fm\b/i, streams: ["https://stream.rcs.revma.com/hc3unrtbv4uvv/hls.m3u8"], logo: "" },
+  { id: "988", name: "988 FM", tag: "友声有色", color: "#f4b400", fg: "#13222a", mark: "988", sub: "友声有色", big: "2.6rem",
+    search: ["988", "988 FM"], match: /988/i, streams: [], logo: "" },
+  { id: "ai", name: "AI FM", tag: "爱FM 越听越爱", color: "#0b5cab", fg: "#fff", mark: "爱FM", sub: "Ai FM", big: "2.4rem",
+    search: ["Ai FM", "Ai FM RTM"], match: /\bai[\s-]?fm\b|爱\s?fm/i, streams: [], logo: "" },
+  { id: "goxuan", name: "GOXUAN FM", tag: "Be Your Own Trend", color: "#12a37f", fg: "#fff", mark: "GOXUAN", sub: "FM", big: "1.5rem",
+    search: ["GoXuan", "Go Xuan"], match: /go[\s-]?xuan|goxuan/i, streams: [], logo: "" },
+  { id: "eight", name: "EIGHT FM", tag: "Eight 无限", color: "#ff6b1a", fg: "#fff", mark: "EIGHT", sub: "无限", big: "1.9rem",
+    search: ["Eight FM", "8FM", "One FM"], match: /eight[\s-]?fm|\b8[\s-]?fm|one fm|eight/i, streams: ["https://stream.rcs.revma.com/qp0xrd9mtd3vv/hls.m3u8"], logo: "" },
+];
+
+const API_HOSTS = ["https://de1.api.radio-browser.info", "https://fi1.api.radio-browser.info", "https://at1.api.radio-browser.info"];
+const HLS_JS = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js";
+
+/* ---------- storage helpers (fail-safe) ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+const $ = (id) => document.getElementById(id);
+const audio = $("audio"), player = $("player");
+let current = null, token = 0, hls = null, stallTimer = null, wantPlay = false;
+
+/* ---------- logos ---------- */
+function tile(st) {
+  const d = document.createElement("div");
+  d.className = "tile";
+  d.style.background = st.color; d.style.color = st.fg; d.style.setProperty("--big", st.big);
+  d.innerHTML = `<div><span class="big">${st.mark}</span><span class="sub">${st.sub}</span></div>`;
+  return d;
+}
+function setLogo(box, st, remoteUrl) {
+  box.replaceChildren(tile(st));
+  const src = st.logo || remoteUrl;
+  if (!src) return;
+  const img = new Image();
+  img.alt = st.name + " logo";
+  img.referrerPolicy = "no-referrer";
+  img.onload = () => { if (img.naturalWidth >= 64 || st.logo) box.replaceChildren(img); };
+  img.src = src;
+}
+
+/* ---------- build station grid ---------- */
+const grid = $("grid");
+STATIONS.forEach((st) => {
+  const b = document.createElement("button");
+  b.className = "station"; b.type = "button"; b.dataset.id = st.id;
+  b.setAttribute("role", "radio"); b.setAttribute("aria-checked", "false");
+  b.innerHTML = `<div class="logo"></div><div><b>${st.name}</b><small>${st.tag}</small></div>`;
+  setLogo(b.querySelector(".logo"), st);
+  b.addEventListener("click", () => select(st.id, true));
+  grid.appendChild(b);
+});
+
+/* ---------- stream lookup ---------- */
+async function apiFetch(path) {
+  let lastErr;
+  for (const host of API_HOSTS) {
+    try {
+      const r = await fetch(host + path, { headers: { Accept: "application/json" } });
+      if (r.ok) return await r.json();
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error("lookup failed");
+}
+
+async function lookup(st) {
+  const cache = store.get("mfm.cache", {});
+  const hit = cache[st.id];
+  if (hit && Date.now() - hit.t < 3 * 86400e3 && hit.urls.length) return hit;
+
+  const seen = new Set(); const found = [];
+  for (const q of st.search) {
+    try {
+      const list = await apiFetch(`/json/stations/search?name=${encodeURIComponent(q)}&countrycode=MY&hidebroken=true&order=clickcount&reverse=true&limit=15`);
+      list.filter((s) => st.match.test(s.name) && s.url_resolved && !seen.has(s.url_resolved))
+          .forEach((s) => { seen.add(s.url_resolved); found.push(s); });
+    } catch {}
+    if (found.length >= 4) break;
+  }
+  const urls = [];
+  found.slice(0, 5).forEach((s) => {
+    const u = s.url_resolved;
+    if (u.startsWith("http://")) urls.push(u.replace("http://", "https://"));
+    urls.push(u);
+  });
+  const result = { urls, favicon: (found.find((s) => s.favicon) || {}).favicon || "", t: Date.now() };
+  if (urls.length) { cache[st.id] = result; store.set("mfm.cache", cache); }
+  return result;
+}
+
+async function candidates(st) {
+  const custom = store.get("mfm.custom", {})[st.id];
+  if (custom) return { urls: [custom], favicon: "" };
+  if (st.streams.length) return { urls: st.streams, favicon: "" };
+  return lookup(st);
+}
+
+/* ---------- playback ---------- */
+function setState(kind, text) {
+  player.classList.toggle("playing", kind === "playing");
+  player.classList.toggle("loading", kind === "loading");
+  $("statusText").textContent = text;
+  const playing = kind === "playing" || kind === "loading";
+  $("play").setAttribute("aria-label", playing ? "Stop" : "Play");
+}
+
+function teardown() {
+  clearTimeout(stallTimer);
+  audio.onerror = null; audio.onplaying = null;
+  if (hls) { hls.destroy(); hls = null; }
+  audio.pause(); audio.removeAttribute("src"); audio.load();
+}
+
+function loadHls() {
+  return new Promise((res, rej) => {
+    if (window.Hls) return res();
+    const s = document.createElement("script");
+    s.src = HLS_JS; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+  });
+}
+
+async function attempt(urls, i, my, st) {
+  if (my !== token) return;
+  if (i >= urls.length) {
+    teardown();
+    setState("idle", `Couldn't reach ${st.name} after ${urls.length} source${urls.length > 1 ? "s" : ""}. Pick another station or add a stream URL in Stream settings.${lastError ? " (" + lastError + ")" : ""}`);
+    return;
+  }
+  const url = urls[i];
+  if (i > 0) setState("loading", `Source unreachable, trying alternative ${i + 1} of ${urls.length}…`);
+  const next = () => attempt(urls, i + 1, my, st);
+  clearTimeout(stallTimer);
+  stallTimer = setTimeout(() => { if (my === token && (audio.paused || audio.readyState < 3)) next(); }, 12000);
+
+  if (hls) { hls.destroy(); hls = null; }
+  audio.onerror = () => { lastError = lastError || "stream error"; next(); };
+  audio.onplaying = () => { if (my === token) { clearTimeout(stallTimer); setState("playing", audio.muted ? "Playing muted - tap anywhere for sound" : "On air"); } };
+
+  try {
+    if (/\.m3u8(\?|$)/i.test(url)) {
+      // Prefer hls.js wherever the browser supports it (Chrome, Edge, Firefox, Android);
+      // fall back to native HLS only where hls.js can't run (iPhone Safari).
+      await loadHls().catch(() => { lastError = "could not load the HLS player library"; });
+      if (my !== token) return;
+      if (window.Hls && Hls.isSupported()) {
+        let recovered = 0, reconnects = 0;
+        hls = new Hls({ lowLatencyMode: false, manifestLoadingMaxRetry: 3, levelLoadingMaxRetry: 4, fragLoadingMaxRetry: 4 });
+        hls.on(Hls.Events.ERROR, (_, d) => {
+          if (!d.fatal) return;
+          lastError = d.details || d.type;
+          if (d.type === Hls.ErrorTypes.MEDIA_ERROR && recovered++ < 2) hls.recoverMediaError();
+          else if (d.type === Hls.ErrorTypes.NETWORK_ERROR && reconnects++ < 3) {
+            // The server hands out short-lived tokens via redirect; asking the original URL again gets a fresh one.
+            setTimeout(() => { if (my === token && hls) { hls.loadSource(url); hls.startLoad(); } }, 800);
+          } else next();
+        });
+        hls.loadSource(url); hls.attachMedia(audio);
+      } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
+        audio.src = url;
+      } else {
+        lastError = "this browser can't play HLS streams";
+        return next();
+      }
+    } else {
+      audio.src = url;
+    }
+    await audio.play();
+  } catch (err) {
+    if (my !== token) return;
+    if (err && err.name === "NotAllowedError") {
+      if (autoStart && !audio.muted) {
+        audio.muted = true;
+        try { await audio.play(); return; } catch {}
+      }
+      teardown();
+      setState("idle", "Tap play to start listening");
+    } else if (err && err.name !== "AbortError") {
+      next();
+    }
+  }
+}
+
+let autoStart = false, lastError = "";
+async function start(st, auto = false) {
+  autoStart = auto;
+  if (!auto) audio.muted = false;
+  const my = ++token;
+  lastError = "";
+  wantPlay = true;
+  teardown();
+  setState("loading", "Connecting…");
+  const custom = store.get("mfm.custom", {})[st.id];
+  let urls;
+  if (custom || st.streams.length) {
+    // Manual channels (MY FM, EIGHT FM): use only the configured URL(s), no automatic lookup for the stream.
+    urls = (custom ? [custom] : [...st.streams]).slice(0, 3);
+    if (!custom) lookup(st).then((i) => { if (i.favicon) refreshLogos(st, i.favicon); }).catch(() => {});
+  } else {
+    const info = await lookup(st).catch(() => ({ urls: [], favicon: "" }));
+    if (my !== token) return;
+    if (info.favicon) refreshLogos(st, info.favicon);
+    urls = [...new Set(info.urls)].slice(0, 3);   // max 3 sources
+  }
+  if (my !== token) return;
+  attempt(urls, 0, my, st);
+}
+
+function stop() {
+  token++; wantPlay = false;
+  teardown();
+  setState("idle", "Stopped");
+}
+
+function refreshLogos(st, favicon) {
+  setLogo(grid.querySelector(`[data-id="${st.id}"] .logo`), st, favicon);
+  if (current && current.id === st.id) setLogo($("nowLogo"), st, favicon);
+}
+
+function select(id, play, auto = false) {
+  const st = STATIONS.find((s) => s.id === id) || STATIONS[0];
+  current = st;
+  store.set("mfm.last", st.id);
+  grid.querySelectorAll(".station").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.id === st.id)));
+  $("nowName").textContent = st.name;
+  $("nowTag").textContent = st.tag;
+  player.style.setProperty("--accent", st.color === "#f4b400" ? "#f4b400" : st.color);
+  setLogo($("nowLogo"), st, (store.get("mfm.cache", {})[st.id] || {}).favicon);
+  const custom = store.get("mfm.custom", {})[st.id] || "";
+  $("customUrl").value = custom;
+  document.title = st.name + " · Malaysia FM Radio";
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: st.name, artist: st.tag, album: "Malaysia FM Radio" });
+  }
+  if (play) start(st, auto); else setState("idle", "Tap play to start listening");
+}
+
+/* ---------- theme ---------- */
+function applyTheme(t, save) {
+  document.documentElement.dataset.theme = t;
+  $("themeLabel").textContent = t === "dark" ? "Light mode" : "Dark mode";
+  $("theme").setAttribute("aria-label", t === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  if (save) store.set("mfm.theme", t);
+}
+applyTheme(document.documentElement.dataset.theme, false);
+$("theme").addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true));
+
+/* ---------- controls ---------- */
+$("play").addEventListener("click", () => {
+  if (player.classList.contains("playing") || player.classList.contains("loading")) stop();
+  else start(current);
+});
+
+const vol = $("volume");
+vol.value = store.get("mfm.volume", 0.8);
+audio.volume = Number(vol.value);
+vol.addEventListener("input", () => { audio.volume = Number(vol.value); store.set("mfm.volume", Number(vol.value)); });
+
+$("saveUrl").addEventListener("click", () => {
+  const u = $("customUrl").value.trim();
+  if (!u) return;
+  const c = store.get("mfm.custom", {}); c[current.id] = u; store.set("mfm.custom", c);
+  start(current);
+});
+$("resetUrl").addEventListener("click", () => {
+  const c = store.get("mfm.custom", {}); delete c[current.id]; store.set("mfm.custom", c);
+  const cache = store.get("mfm.cache", {}); delete cache[current.id]; store.set("mfm.cache", cache);
+  $("customUrl").value = "";
+  start(current);
+});
+
+if ("mediaSession" in navigator) {
+  navigator.mediaSession.setActionHandler("play", () => start(current));
+  navigator.mediaSession.setActionHandler("pause", stop);
+  const step = (d) => { const i = STATIONS.indexOf(current); select(STATIONS[(i + d + STATIONS.length) % STATIONS.length].id, true); };
+  navigator.mediaSession.setActionHandler("nexttrack", () => step(1));
+  navigator.mediaSession.setActionHandler("previoustrack", () => step(-1));
+}
+
+/* ---------- start: always begin with Melody ---------- */
+select("melody", true, true);
+// Browsers block sound until the first tap/key press. Unmute (or start) on the first interaction.
+const firstGesture = () => {
+  if (audio.muted) {
+    audio.muted = false;
+    if (player.classList.contains("playing")) setState("playing", "On air");
+  } else if (!player.classList.contains("playing") && !player.classList.contains("loading") && wantPlay) {
+    start(current);
+  }
+};
+["pointerdown", "keydown"].forEach((e) => document.addEventListener(e, firstGesture, { once: true }));
+</script>
+</body>
+</html>
