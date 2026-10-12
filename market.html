@@ -74,7 +74,26 @@ html.locked #lock{display:flex}
 .lockbox input{width:100%;text-align:center;letter-spacing:6px;font-size:18px;margin-bottom:10px}
 .lockbox button{width:100%}
 #lockmsg{color:var(--down);font-size:12px;min-height:18px;margin-top:8px}
-@media (max-width:600px){th,td{padding:12px 10px}.add{flex-wrap:wrap}#sug{right:0}}
+@media (max-width:700px){
+.wrap{padding:14px 10px 32px}
+.add{flex-wrap:wrap}.add input{flex:1 1 100%}.add select{flex:1;min-width:0}
+#sug{right:0}.addg input{flex:1}
+.tablewrap{overflow:visible}
+table{min-width:0}table,tbody{display:block}thead{display:none}
+tr.gh,tr.ge{display:block}tr.gh td,tr.ge td{display:block;padding:10px 12px}
+tr.sr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 34px;grid-template-areas:"name name price del" "chg pct rng rng";align-items:center;row-gap:8px;padding:10px 12px;background:var(--row);border-bottom:1px solid var(--line)}
+tr.sr td{padding:0;border:none;background:none;white-space:normal}
+td.c-name{grid-area:name;min-width:0}
+td.c-price{grid-area:price;text-align:right;font-size:17px;font-weight:600}
+td.x{grid-area:del;width:auto}
+td.c-chg,td.c-pct{text-align:left}
+td.c-chg{grid-area:chg}td.c-pct{grid-area:pct}
+td.rng{grid-area:rng;text-align:right}
+td.err{grid-area:2/1/3/5;text-align:left}
+.rng .bar{width:100%;max-width:120px;margin:6px 0 4px auto}
+.rng .lbl{width:100%;max-width:120px;margin:0 0 0 auto}
+.co{max-width:100%}.x button{opacity:1}
+}
 </style>
 </head>
 <body>
@@ -120,7 +139,7 @@ html.locked #lock{display:flex}
   </div>
   <p class="hint">Drag the ⋮⋮ handle to move a symbol up, down or into another section, or to reorder sections. Yahoo symbols: Bursa <b>.KL</b>, Hong Kong <b>.HK</b>, Singapore <b>.SI</b>, London <b>.L</b>, indices start with <b>^</b>, futures end with <b>=F</b>, crypto like <b>BTC-USD</b>. Some exchanges are delayed 15 to 20 minutes.</p>
   <details class="net" id="net"><summary>Connection settings</summary>
-    Price proxy address (your Cloudflare Worker):
+    Price proxy address (your Cloudflare Worker, also used to sync your watchlist between devices):
     <input id="proxy" type="text" placeholder="https://your-worker.workers.dev/">
   </details>
 </div>
@@ -147,8 +166,8 @@ $("unlock").onclick=tryPin;
 $("pin").addEventListener("keydown",e=>{if(e.key==="Enter")tryPin()});
 
 /* ---------- theme ---------- */
-function setTheme(t){document.documentElement.dataset.theme=t;$("theme").textContent=t==="dark"?"Light mode":"Dark mode";store.set("mw.theme",t)}
-setTheme(store.get("mw.theme")||"dark");
+function setTheme(t,user=true){document.documentElement.dataset.theme=t;$("theme").textContent=t==="dark"?"Light mode":"Dark mode";store.set("mw.theme",t);if(user&&typeof touch==="function")touch()}
+setTheme(store.get("mw.theme")||"dark",false);
 $("theme").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
 
 /* ---------- state: sections containing symbols ---------- */
@@ -162,8 +181,37 @@ function load(){
 }
 let groups=load();
 const data={};
-const save=()=>store.set("mw.groups",JSON.stringify(groups));
+const save=()=>{store.set("mw.groups",JSON.stringify(groups));touch()};
 const allSyms=()=>groups.flatMap(g=>g.symbols);
+
+/* ---------- cross-device sync (stored in your Worker's KV) ---------- */
+const SYNC_KEY=h53("sync:"+PIN_HASH);
+let tStamp=+store.get("mw.t")||0,syncTimer=null,syncMsg="";
+const syncUrl=()=>customProxy?customProxy.replace(/\?url=$/,"")+"?sync=1":"";
+function touch(){tStamp=Date.now();store.set("mw.t",String(tStamp));clearTimeout(syncTimer);syncTimer=setTimeout(push,800)}
+async function push(){
+  const u=syncUrl();if(!u)return;
+  if(!tStamp){tStamp=Date.now();store.set("mw.t",String(tStamp))}
+  try{
+    const r=await fetch(u,{method:"PUT",headers:{"X-Sync-Key":SYNC_KEY,"Content-Type":"application/json"},body:JSON.stringify({t:tStamp,groups,theme:document.documentElement.dataset.theme})});
+    syncMsg=r.ok?"synced":r.status===501?"sync not set up (add KV to Worker)":"sync error";
+  }catch(e){syncMsg="sync offline"}
+}
+async function pull(){
+  const u=syncUrl();if(!u)return false;
+  try{
+    const r=await fetch(u,{headers:{"X-Sync-Key":SYNC_KEY},cache:"no-store"});
+    if(r.status===501){syncMsg="sync not set up (add KV to Worker)";return false}
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    if(j&&j.t&&j.t>tStamp&&Array.isArray(j.groups)){
+      groups=j.groups;tStamp=j.t;store.set("mw.t",String(tStamp));store.set("mw.groups",JSON.stringify(groups));
+      if(j.theme)setTheme(j.theme,false);syncMsg="synced";return true;
+    }
+    if(!j||!j.t||j.t<tStamp||!tStamp)await push();else syncMsg="synced";
+  }catch(e){syncMsg="sync offline"}
+  return false;
+}
 
 /* ---------- fetching ---------- */
 const normProxy=v=>{v=(v||"").trim();if(!v)return"";if(!/^https?:\/\//.test(v))v="https://"+v;return v.includes("?")?v:v.replace(/\/+$/,"")+"/?url="};
@@ -209,6 +257,7 @@ async function fetchQuote(sym){
 }
 async function refreshAll(){
   $("status").textContent="Updating…";
+  if(!drag&&!document.querySelector("[contenteditable=true]")){if(await pull())render()}
   const queue=allSyms();
   const worker=async()=>{
     while(queue.length){
@@ -220,7 +269,7 @@ async function refreshAll(){
   };
   await Promise.all([worker(),worker(),worker()]);
   const failed=allSyms().filter(s=>data[s]&&data[s].error).length;
-  $("status").textContent="Updated "+new Date().toLocaleTimeString()+" · refreshes every minute"+(failed?` · ${failed} could not load, will retry`:"");
+  $("status").textContent="Updated "+new Date().toLocaleTimeString()+" · refreshes every minute"+(syncMsg?" · "+syncMsg:"")+(failed?` · ${failed} could not load, will retry`:"");
   if(failed&&!allSyms().some(s=>data[s]&&!data[s].error))$("net").open=true;
 }
 
@@ -230,7 +279,7 @@ function rowHTML(s,gid){
   const q=data[s];
   const href=`https://finance.yahoo.com/quote/${encodeURIComponent(s)}`;
   const nm=q&&q.name;
-  const cell=`<td><div class="cellwrap"><span class="grip" title="Drag to move">⋮⋮</span><div>${nm?`<a class="co" href="${href}" target="_blank" rel="noopener">${esc(nm)}</a><a class="sym" href="${href}" target="_blank" rel="noopener">${esc(s)}</a>`:`<a class="co" href="${href}" target="_blank" rel="noopener">${esc(s)}</a>`}</div></div></td>`;
+  const cell=`<td class="c-name"><div class="cellwrap"><span class="grip" title="Drag to move">⋮⋮</span><div>${nm?`<a class="co" href="${href}" target="_blank" rel="noopener">${esc(nm)}</a><a class="sym" href="${href}" target="_blank" rel="noopener">${esc(s)}</a>`:`<a class="co" href="${href}" target="_blank" rel="noopener">${esc(s)}</a>`}</div></div></td>`;
   const del=`<td class="x"><button data-del="${esc(s)}" aria-label="Remove ${esc(s)}" title="Remove">×</button></td>`;
   const open=`<tr class="sr" data-g="${gid}" data-s="${esc(s)}">`;
   if(!q)return`${open}${cell}<td colspan="4" class="err">Loading…</td>${del}</tr>`;
@@ -240,9 +289,9 @@ function rowHTML(s,gid){
   const span=q.hi-q.lo,pos=span>0?Math.min(100,Math.max(0,(q.price-q.lo)/span*100)):50;
   const col=cls==="down"?"var(--down)":"var(--up)";
   return`${open}${cell}
-    <td class="${cls}">${fmt(q.price,q.price)}</td>
-    <td class="${cls}">${sign}${fmt(chg,q.price)}</td>
-    <td class="${cls}">${sign}${pct.toFixed(2)}%</td>
+    <td class="c-price ${cls}">${fmt(q.price,q.price)}</td>
+    <td class="c-chg ${cls}">${sign}${fmt(chg,q.price)}</td>
+    <td class="c-pct ${cls}">${sign}${pct.toFixed(2)}%</td>
     <td class="rng"><div class="bar"><div class="fill" style="width:${pos}%;background:${col}"></div><div class="pin" style="left:${pos}%;background:${col}"></div></div><div class="lbl"><span>${fmt(q.lo,q.price)}</span><span>${fmt(q.hi,q.price)}</span></div></td>
     ${del}</tr>`;
 }
